@@ -1,29 +1,3 @@
-/*
-	doors.qc
-
-	door functions
-
-	Copyright (C) 1996-1997  Id Software, Inc.
-
-	This program is free software; you can redistribute it and/or
-	modify it under the terms of the GNU General Public License
-	as published by the Free Software Foundation; either version 2
-	of the License, or (at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-	See the GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with this program; if not, write to:
-
-		Free Software Foundation, Inc.
-		59 Temple Place - Suite 330
-		Boston, MA  02111-1307, USA
-
-*/
 
 float DOOR_START_OPEN = 1;
 float DOOR_DONT_LINK = 4;
@@ -57,8 +31,7 @@ void() door_go_up;
 
 void() door_blocked =
 {
-	other.deathtype = "squish";
-	T_Damage (other, self, self.goalentity, self.dmg);
+	T_Damage (other, self, self.goalentity, self.dmg, MOD_SQUISH);
 
 // if a door has a negative wait, it would never come back if blocked,
 // so let it just squash the object to death real fast
@@ -74,7 +47,7 @@ void() door_blocked =
 
 void() door_hit_top =
 {
-	sound (self, CHAN_NO_PHS_ADD+CHAN_VOICE, self.noise1, 1, ATTN_NORM);
+	sound (self, chan_no_phs_add|CHAN_VOICE, self.noise1, 1, ATTN_NORM);
 	self.state = STATE_TOP;
 	if (self.spawnflags & DOOR_TOGGLE)
 		return;         // don't come down automatically
@@ -84,7 +57,7 @@ void() door_hit_top =
 
 void() door_hit_bottom =
 {
-	sound (self, CHAN_NO_PHS_ADD+CHAN_VOICE, self.noise1, 1, ATTN_NORM);
+	sound (self, chan_no_phs_add|CHAN_VOICE, self.noise1, 1, ATTN_NORM);
 	self.state = STATE_BOTTOM;
 };
 
@@ -139,7 +112,7 @@ void() door_fire =
 // play use key sound
 
 	if (self.items)
-		sound (self, CHAN_VOICE, self.noise4, 1, ATTN_NORM);
+		sound (self, CHAN_ITEM, self.noise4, 1, ATTN_NORM);
 
 	self.message = string_null;             // no more message
 	oself = self;
@@ -247,40 +220,36 @@ void() door_touch =
 	{
 		if (self.owner.items == IT_KEY1)
 		{
-			if (world.worldtype == 2)
+			switch (world.worldtype)
 			{
-				centerprint (other, "You need the silver keycard");
-				sound (self, CHAN_VOICE, self.noise3, 1, ATTN_NORM);
-			}
-			else if (world.worldtype == 1)
-			{
-				centerprint (other, "You need the silver runekey");
-				sound (self, CHAN_VOICE, self.noise3, 1, ATTN_NORM);
-			}
-			else if (world.worldtype == 0)
-			{
+			case WT_MEDIEVAL:
 				centerprint (other, "You need the silver key");
-				sound (self, CHAN_VOICE, self.noise3, 1, ATTN_NORM);
+				break;
+			case WT_METAL:
+				centerprint (other, "You need the silver runekey");
+				break;
+			case WT_BASE:
+				centerprint (other, "You need the silver keycard");
+				break;
 			}
 		}
 		else
 		{
-			if (world.worldtype == 2)
+			switch (world.worldtype)
 			{
-				centerprint (other, "You need the gold keycard");
-				sound (self, CHAN_VOICE, self.noise3, 1, ATTN_NORM);
-			}
-			else if (world.worldtype == 1)
-			{
-				centerprint (other, "You need the gold runekey");
-				sound (self, CHAN_VOICE, self.noise3, 1, ATTN_NORM);                    
-			}
-			else if (world.worldtype == 0)
-			{
+			case WT_MEDIEVAL:
 				centerprint (other, "You need the gold key");
-				sound (self, CHAN_VOICE, self.noise3, 1, ATTN_NORM);
+				break;
+			case WT_METAL:
+				centerprint (other, "You need the gold runekey");
+				break;
+			case WT_BASE:
+				centerprint (other, "You need the gold keycard");
+				break;
 			}
 		}
+
+		sound (self, CHAN_VOICE, self.noise3, 1, ATTN_NORM);
 		return;
 	}
 
@@ -318,7 +287,7 @@ entity(vector fmins, vector fmaxs) spawn_field =
 };
 
 
-float (entity e1, entity e2) EntitiesTouching =
+BOOL (entity e1, entity e2) EntitiesTouching =
 {
 	if (e1.mins_x > e2.maxs_x)
 		return FALSE;
@@ -447,70 +416,64 @@ Key doors are allways wait -1.
 */
 
 void() func_door =
-
 {
-
-	if (world.worldtype == 0)
+	switch (world.worldtype)
 	{
+	case WT_MEDIEVAL:
 		precache_sound ("doors/medtry.wav");
 		precache_sound ("doors/meduse.wav");
 		self.noise3 = "doors/medtry.wav";
 		self.noise4 = "doors/meduse.wav";
-	}
-	else if (world.worldtype == 1)
-	{
+		break;
+	case WT_METAL:
 		precache_sound ("doors/runetry.wav");
 		precache_sound ("doors/runeuse.wav");
 		self.noise3 = "doors/runetry.wav";
 		self.noise4 = "doors/runeuse.wav";
-	}
-	else if (world.worldtype == 2)
-	{
+		break;
+	case WT_BASE:
 		precache_sound ("doors/basetry.wav");
 		precache_sound ("doors/baseuse.wav");
 		self.noise3 = "doors/basetry.wav";
 		self.noise4 = "doors/baseuse.wav";
-	}
-	else
-	{
+		break;
+	default:
 		dprint ("no worldtype set!\n");
 	}
-	if (self.sounds == 0)
+
+	switch (self.sounds)
 	{
+	case 0:
 		precache_sound ("misc/null.wav");
 		precache_sound ("misc/null.wav");
 		self.noise1 = "misc/null.wav";
 		self.noise2 = "misc/null.wav";
-	}
-	if (self.sounds == 1)
-	{
+		break;
+	case 1:
 		precache_sound ("doors/drclos4.wav");
 		precache_sound ("doors/doormv1.wav");
 		self.noise1 = "doors/drclos4.wav";
 		self.noise2 = "doors/doormv1.wav";
-	}
-	if (self.sounds == 2)
-	{
+		break;
+	case 2:
 		precache_sound ("doors/hydro1.wav");
 		precache_sound ("doors/hydro2.wav");
 		self.noise2 = "doors/hydro1.wav";
 		self.noise1 = "doors/hydro2.wav";
-	}
-	if (self.sounds == 3)
-	{
+		break;
+	case 3:
 		precache_sound ("doors/stndr1.wav");
 		precache_sound ("doors/stndr2.wav");
 		self.noise2 = "doors/stndr1.wav";
 		self.noise1 = "doors/stndr2.wav";
-	}
-	if (self.sounds == 4)
-	{
+		break;
+	case 4:
 		precache_sound ("doors/ddoor1.wav");
 		precache_sound ("doors/ddoor2.wav");
 		self.noise1 = "doors/ddoor2.wav";
 		self.noise2 = "doors/ddoor1.wav";
+		break;
 	}
-
 
 	SetMovedir ();
 
@@ -624,13 +587,13 @@ void () fd_secret_use =
 	if (!self.t_width)
 	{
 		if (self.spawnflags & SECRET_1ST_DOWN)
-			self. t_width = fabs(v_up * self.size);
+			self.t_width = fabs(v_up * self.size);
 		else
-			self. t_width = fabs(v_right * self.size);
+			self.t_width = fabs(v_right * self.size);
 	}
 		
 	if (!self.t_length)
-		self. t_length = fabs(v_forward * self.size);
+		self.t_length = fabs(v_forward * self.size);
 
 	if (self.spawnflags & SECRET_1ST_DOWN)
 		self.dest1 = self.origin - v_up * self.t_width;
@@ -698,7 +661,7 @@ void () fd_secret_done =
 		self.th_pain = fd_secret_use;   
 		self.th_die = fd_secret_use;
 	}
-	sound(self, CHAN_NO_PHS_ADD+CHAN_VOICE, self.noise3, 1, ATTN_NORM);
+	sound(self, chan_no_phs_add|CHAN_VOICE, self.noise3, 1, ATTN_NORM);
 };
 
 void () secret_blocked =
@@ -706,8 +669,7 @@ void () secret_blocked =
 	if (time < self.attack_finished)
 		return;
 	self.attack_finished = time + 0.5;
-	other.deathtype = "squish";
-	T_Damage (other, self, self, self.dmg);
+	T_Damage (other, self, self, self.dmg, MOD_SQUISH);
 };
 
 /*
@@ -753,32 +715,31 @@ If a secret door has a targetname, it will only be opened by it's botton or trig
 
 void () func_door_secret =
 {
-	if (self.sounds == 0)
-		self.sounds = 3;
-	if (self.sounds == 1)
+	switch (self.sounds)
 	{
+	case 0:
+	case 3:
+		precache_sound ("doors/basesec1.wav");
+		precache_sound ("doors/basesec2.wav");
+		self.noise2 = "doors/basesec1.wav";
+		self.noise1 = "doors/basesec2.wav";
+		self.noise3 = "doors/basesec2.wav";
+		break;
+	case 1:
 		precache_sound ("doors/latch2.wav");
 		precache_sound ("doors/winch2.wav");
 		precache_sound ("doors/drclos4.wav");
 		self.noise1 = "doors/latch2.wav";
 		self.noise2 = "doors/winch2.wav";
 		self.noise3 = "doors/drclos4.wav";
-	}
-	if (self.sounds == 2)
-	{
+		break;
+	case 2:
 		precache_sound ("doors/airdoor1.wav");
 		precache_sound ("doors/airdoor2.wav");
 		self.noise2 = "doors/airdoor1.wav";
 		self.noise1 = "doors/airdoor2.wav";
 		self.noise3 = "doors/airdoor2.wav";
-	}
-	if (self.sounds == 3)
-	{
-		precache_sound ("doors/basesec1.wav");
-		precache_sound ("doors/basesec2.wav");
-		self.noise2 = "doors/basesec1.wav";
-		self.noise1 = "doors/basesec2.wav";
-		self.noise3 = "doors/basesec2.wav";
+		break;
 	}
 
 	if (!self.dmg)
@@ -806,4 +767,4 @@ void () func_door_secret =
 	self.oldorigin = self.origin;
 	if (!self.wait)
 		self.wait = 5;          // 5 seconds before closing
-};
+}; 

@@ -1,37 +1,8 @@
-/*
-	misc.qc
-
-	pretty much everything else
-
-	Copyright (C) 1996-1997  Id Software, Inc.
-
-	This program is free software; you can redistribute it and/or
-	modify it under the terms of the GNU General Public License
-	as published by the Free Software Foundation; either version 2
-	of the License, or (at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-	See the GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with this program; if not, write to:
-
-		Free Software Foundation, Inc.
-		59 Temple Place - Suite 330
-		Boston, MA  02111-1307, USA
-
-*/
 
 /*QUAKED info_null (0 0.5 0) (-4 -4 -4) (4 4 4)
 Used as a positional target for spotlights, etc.
 */
-void() info_null =
-{
-	remove(self);
-};
+var void() info_null = SUB_Remove;
 
 /*QUAKED info_notnull (0 0.5 0) (-4 -4 -4) (4 4 4)
 Used as a positional target for lightning.
@@ -54,7 +25,7 @@ void() light_use =
 	else
 	{
 		lightstyle(self.style, "a");
-		self.spawnflags = self.spawnflags + START_OFF;
+		self.spawnflags = self.spawnflags | START_OFF;
 	}
 };
 
@@ -128,6 +99,7 @@ void() light_globe =
 {
 	precache_model ("progs/s_light.spr");
 	setmodel (self, "progs/s_light.spr");
+	self.alpha = 0.5;
 	makestatic (self);
 };
 
@@ -159,6 +131,7 @@ void() light_flame_large_yellow =
 	precache_model ("progs/flame2.mdl");
 	setmodel (self, "progs/flame2.mdl");
 	self.frame = 1;
+	self.alpha = 0.5;
 	FireAmbient ();
 	makestatic (self);
 };
@@ -170,6 +143,7 @@ void() light_flame_small_yellow =
 {
 	precache_model ("progs/flame2.mdl");
 	setmodel (self, "progs/flame2.mdl");
+	self.alpha = 0.5;
 	FireAmbient ();
 	makestatic (self);
 };
@@ -181,6 +155,7 @@ void() light_flame_small_white =
 {
 	precache_model ("progs/flame2.mdl");
 	setmodel (self, "progs/flame2.mdl");
+	self.alpha = 0.5;
 	FireAmbient ();
 	makestatic (self);
 };
@@ -192,47 +167,31 @@ void() light_flame_small_white =
 Lava Balls
 */
 
-void() fire_fly;
-void() fire_touch;
-void() misc_fireball =
-{
-	
-	precache_model ("progs/lavaball.mdl");
-	self.classname = "fireball";
-	self.nextthink = time + (random() * 5);
-	self.think = fire_fly;
-	if (!self.speed)
-		self.speed == 1000;
-};
-
 void() fire_fly =
 {
-local entity    fireball;
+	local vector vel;
 
-	fireball = spawn();
-	fireball.solid = SOLID_TRIGGER;
-	fireball.movetype = MOVETYPE_TOSS;
-	fireball.velocity = '0 0 1000';
-	fireball.velocity_x = (random() * 100) - 50;
-	fireball.velocity_y = (random() * 100) - 50;
-	fireball.velocity_z = self.speed + (random() * 200);
-	fireball.classname = "fireball";
-	setmodel (fireball, "progs/lavaball.mdl");
-	setsize (fireball, '0 0 0', '0 0 0');
-	setorigin (fireball, self.origin);
-	fireball.nextthink = time + 5;
-	fireball.think = SUB_Remove;
-	fireball.touch = fire_touch;
+	vel_x = (random() * 100) - 50;
+	vel_y = (random() * 100) - 50;
+	vel_z = self.speed + (random() * 200);
+
+	PRJ_FireProjectile (world, "progs/lavaball.mdl", self.origin, vel, PE_NONE, 20, MOD_FIREBALL, 5);
+	newmis.movetype = MOVETYPE_BOUNCE;
+	newmis.alpha = 0.9;
 	
 	self.nextthink = time + (random() * 5) + 3;
 	self.think = fire_fly;
 };
 
-
-void() fire_touch =
+void() misc_fireball =
 {
-	T_Damage (other, self, self, 20);
-	remove(self);
+	
+	precache_model ("progs/lavaball.mdl");
+	self.classname = "fireball";
+	self.nextthink = time + 0.1 + (random() * 4.9);
+	self.think = fire_fly;
+	if (!self.speed)
+		self.speed = 1000;
 };
 
 //============================================================================
@@ -242,14 +201,9 @@ void() barrel_explode =
 {
 	self.takedamage = DAMAGE_NO;
 	self.classname = "explo_box";
-	// did say self.owner
-	T_RadiusDamage (self, self, 160, world, "");
-	WriteByte (MSG_MULTICAST, SVC_TEMPENTITY);
-	WriteByte (MSG_MULTICAST, TE_EXPLOSION);
-	WriteCoord (MSG_MULTICAST, self.origin_x);
-	WriteCoord (MSG_MULTICAST, self.origin_y);
-	WriteCoord (MSG_MULTICAST, self.origin_z+32);
-	multicast (self.origin, MULTICAST_PHS);
+	// did say self.owner, self.enemy should be set by Killed function
+	T_RadiusDamage (self, self.enemy, 160, 200, self, MOD_EXPLOBOX);
+	TE_explosion(self.origin + '0 0 32');
 	remove (self);
 };
 
@@ -323,84 +277,47 @@ void() misc_explobox2 =
 float SPAWNFLAG_SUPERSPIKE      = 1;
 float SPAWNFLAG_LASER = 2;
 
-void() Laser_Touch =
-{
-	local vector org;
-	
-	if (other == self.owner)
-		return;         // don't explode on owner
-
-	if (pointcontents(self.origin) == CONTENT_SKY)
-	{
-		remove(self);
-		return;
-	}
-	
-	sound (self, CHAN_WEAPON, "enforcer/enfstop.wav", 1, ATTN_STATIC);
-	org = self.origin - 8*normalize(self.velocity);
-
-	if (other.health)
-	{
-		SpawnBlood (org, 15);
-		other.deathtype = "laser";
-		T_Damage (other, self, self.owner, 15);
-	}
-	else
-	{
-		WriteByte (MSG_MULTICAST, SVC_TEMPENTITY);
-		WriteByte (MSG_MULTICAST, TE_GUNSHOT);
-		WriteByte (MSG_MULTICAST, 5);
-		WriteCoord (MSG_MULTICAST, org_x);
-		WriteCoord (MSG_MULTICAST, org_y);
-		WriteCoord (MSG_MULTICAST, org_z);
-		multicast (org, MULTICAST_PVS);
-	}
-	
-	remove(self);   
-};
-
-void(vector org, vector vec) LaunchLaser =
-{
-	local   vector  vec;
-		
-	if (self.classname == "monster_enforcer")
-		sound (self, CHAN_WEAPON, "enforcer/enfire.wav", 1, ATTN_NORM);
-
-	vec = normalize(vec);
-	
-	newmis = spawn();
-	newmis.owner = self;
-	newmis.movetype = MOVETYPE_FLY;
-	newmis.solid = SOLID_BBOX;
-	newmis.effects = EF_DIMLIGHT;
-
-	setmodel (newmis, "progs/laser.mdl");
-	setsize (newmis, '0 0 0', '0 0 0');             
-
-	setorigin (newmis, org);
-
-	newmis.velocity = vec * 600;
-	newmis.angles = vectoangles(newmis.velocity);
-
-	newmis.nextthink = time + 5;
-	newmis.think = SUB_Remove;
-	newmis.touch = Laser_Touch;
-};
-
 void() spikeshooter_use =
 {
 	if (self.spawnflags & SPAWNFLAG_LASER)
 	{
 		sound (self, CHAN_VOICE, "enforcer/enfire.wav", 1, ATTN_NORM);
-		LaunchLaser (self.origin, self.movedir);
+		PRJ_FireProjectile(self,
+			"progs/laser.mdl",
+			self.origin,
+			self.movedir * 600,
+			PE_LASER,
+			15,
+			MOD_LASER,
+			5);
+		newmis.effects |= EF_DIMLIGHT;
+		newmis.alpha = 0.5;
 	}
 	else
 	{
 		sound (self, CHAN_VOICE, "weapons/spike2.wav", 1, ATTN_NORM);
-		launch_spike (self.origin, self.movedir);
-		newmis.velocity = self.movedir * 500;
 		if (self.spawnflags & SPAWNFLAG_SUPERSPIKE)
-			newmis.touch = superspike_touch;
+		{
+			PRJ_FireProjectile(self,
+				"progs/s_spike.mdl",
+				self.origin,
+				self.movedir * 500,
+				PE_SUPERSPIKE,
+				18,
+				MOD_SUPERSPIKE,
+				6);
+		}
+		else
+		{
+			PRJ_FireProjectile(self,
+				"progs/spike.mdl",
+				self.origin,
+				self.movedir * 500,
+				PE_SPIKE,
+				9,
+				MOD_SPIKE,
+				6);
+		}
 	}
 };
 
@@ -444,7 +361,7 @@ void() trap_shooter =
 	
 	if (self.wait == 0)
 		self.wait = 1;
-	self.nextthink = self.nextthink + self.wait + self.ltime;
+	self.nextthink = time + self.wait;
 	self.think = shooter_think;
 };
 
@@ -457,9 +374,7 @@ void() trap_shooter =
 ===============================================================================
 */
 
-
 void() make_bubbles;
-void() bubble_remove;
 void() bubble_bob;
 
 /*QUAKED air_bubbles (0 .5 .8) (-8 -8 -8) (8 8 8)
@@ -467,10 +382,7 @@ void() bubble_bob;
 testing air bubbles
 */
 
-void() air_bubbles =
-{
-	remove (self);
-};
+noref var void() air_bubbles = SUB_Remove;
 
 void() make_bubbles =
 {
@@ -484,10 +396,10 @@ local entity    bubble;
 	bubble.velocity = '0 0 15';
 	bubble.nextthink = time + 0.5;
 	bubble.think = bubble_bob;
-	bubble.touch = bubble_remove;
 	bubble.classname = "bubble";
 	bubble.frame = 0;
-	bubble.cnt = 0;
+	bubble.bubble_state = 0;
+	bubble.alpha = 0.4;
 	setsize (bubble, '-8 -8 -8', '8 8 8');
 	self.nextthink = time + random() + 0.5;
 	self.think = make_bubbles;
@@ -504,36 +416,24 @@ local entity    bubble;
 	bubble.velocity = self.velocity;
 	bubble.nextthink = time + 0.5;
 	bubble.think = bubble_bob;
-	bubble.touch = bubble_remove;
 	bubble.classname = "bubble";
 	bubble.frame = 1;
-	bubble.cnt = 10;
+	bubble.bubble_state = 10;
 	setsize (bubble, '-8 -8 -8', '8 8 8');
 	self.frame = 1;
-	self.cnt = 10;
+	self.bubble_state = 10;
 	if (self.waterlevel != 3)
 		remove (self);
-};
-
-void() bubble_remove =
-{
-	if (other.classname == self.classname)
-	{
-//              dprint ("bump");
-		return;
-	}
-	remove(self);
 };
 
 void() bubble_bob =
 {
 local float             rnd1, rnd2, rnd3;
-local vector    vtmp1, modi;
 
-	self.cnt = self.cnt + 1;
-	if (self.cnt == 4)
+	self.bubble_state = self.bubble_state + 1;
+	if (self.bubble_state == 4)
 		bubble_split();
-	if (self.cnt == 20)
+	if (self.bubble_state == 20)
 		remove(self);
 
 	rnd1 = self.velocity_x + (-10 + (random() * 20));
@@ -571,15 +471,7 @@ local vector    vtmp1, modi;
 Just for the debugging level.  Don't use
 */
 
-void() viewthing =
-
-{
-	self.movetype = MOVETYPE_NONE;
-	self.solid = SOLID_NOT;
-	precache_model ("progs/player.mdl");
-	setmodel (self, "progs/player.mdl");
-};
-
+noref var void() viewthing = SUB_Remove;
 
 /*
 ==============================================================================
@@ -611,20 +503,18 @@ void() func_wall =
 A simple entity that looks solid but lets you walk through it.
 */
 void() func_illusionary =
-
 {
 	self.angles = '0 0 0';
 	self.movetype = MOVETYPE_NONE;
 	self.solid = SOLID_NOT;
 	setmodel (self, self.model);
-	makestatic ();
+	makestatic (self);
 };
 
 /*QUAKED func_episodegate (0 .5 .8) ? E1 E2 E3 E4
 This bmodel will appear if the episode has allready been completed, so players can't reenter it.
 */
 void() func_episodegate =
-
 {
 	if (!(serverflags & self.spawnflags))
 		return;                 // can still enter episode
@@ -640,10 +530,12 @@ void() func_episodegate =
 This bmodel appears unless players have all of the episode sigils.
 */
 void() func_bossgate =
-
 {
 	if ( (serverflags & 15) == 15)
+	{
+		remove(self);
 		return;         // all episodes completed
+	}
 	self.angles = '0 0 0';
 	self.movetype = MOVETYPE_PUSH;  // so it doesn't get pushed by anything
 	self.solid = SOLID_BSP;
@@ -718,39 +610,3 @@ void() ambient_swamp2 =
 	ambientsound (self.origin, "ambience/swamp2.wav", 0.5, ATTN_STATIC);
 };
 
-//============================================================================
-
-void() noise_think =
-{
-	self.nextthink = time + 0.5;
-	sound (self, 1, "enforcer/enfire.wav", 1, ATTN_NORM);
-	sound (self, 2, "enforcer/enfstop.wav", 1, ATTN_NORM);
-	sound (self, 3, "enforcer/sight1.wav", 1, ATTN_NORM);
-	sound (self, 4, "enforcer/sight2.wav", 1, ATTN_NORM);
-	sound (self, 5, "enforcer/sight3.wav", 1, ATTN_NORM);
-	sound (self, 6, "enforcer/sight4.wav", 1, ATTN_NORM);
-	sound (self, 7, "enforcer/pain1.wav", 1, ATTN_NORM);
-};
-
-/*QUAKED misc_noisemaker (1 0.5 0) (-10 -10 -10) (10 10 10)
-
-For optimzation testing, starts a lot of sounds.
-*/
-
-void() misc_noisemaker =
-
-{
-	precache_sound2 ("enforcer/enfire.wav");
-	precache_sound2 ("enforcer/enfstop.wav");
-	precache_sound2 ("enforcer/sight1.wav");
-	precache_sound2 ("enforcer/sight2.wav");
-	precache_sound2 ("enforcer/sight3.wav");
-	precache_sound2 ("enforcer/sight4.wav");
-	precache_sound2 ("enforcer/pain1.wav");
-	precache_sound2 ("enforcer/pain2.wav");
-	precache_sound2 ("enforcer/death1.wav");
-	precache_sound2 ("enforcer/idle1.wav");
-
-	self.nextthink = time + 0.1 + random();
-	self.think = noise_think;
-};

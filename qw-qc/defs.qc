@@ -1,29 +1,15 @@
-/*
-	defs.qc
+#ifdef FTE
+// use real int if using FTE type progs
+#define INTEGER int
+#else
+#define INTEGER float
+#endif
 
-	global definitions
+#define BOOL INTEGER
 
-	Copyright (C) 1996-1997  Id Software, Inc.
 
-	This program is free software; you can redistribute it and/or
-	modify it under the terms of the GNU General Public License
-	as published by the Free Software Foundation; either version 2
-	of the License, or (at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-	See the GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with this program; if not, write to:
-
-		Free Software Foundation, Inc.
-		59 Temple Place - Suite 330
-		Boston, MA  02111-1307, USA
-
-*/
+#define FALSE ((BOOL)0)
+#define TRUE ((BOOL)1)
 
 /*
 ==============================================================================
@@ -42,10 +28,11 @@ entity          world;
 float           time;
 float           frametime;
 
+#ifndef NETQUAKE
 entity          newmis;                         // if this is set, the entity that just
 								// run created a new missile that should
 								// be simulated immediately
-
+#endif
 
 float           force_retouch;          // force all entities to touch triggers
 								// next frame.  this is needed because
@@ -56,6 +43,12 @@ float           force_retouch;          // force all entities to touch triggers
 								// decremented each frame, so set to 2
 								// to guarantee everything is touched
 string          mapname;
+
+#ifdef NETQUAKE
+float deathmatch;
+float coop;
+float teamplay;
+#endif
 
 float           serverflags;            // propagated from level to level, used to
 								// keep track of completed episodes
@@ -131,7 +124,9 @@ void            end_sys_globals;                // flag for structure dumping
 .vector         absmin, absmax; // *** origin + mins / maxs
 
 .float          ltime;                  // local time for entity
+#ifndef NETQUAKE
 .float          lastruntime;    // *** to allow entities to run out of sequence
+#endif
 
 .float          movetype;
 .float          solid;
@@ -141,6 +136,10 @@ void            end_sys_globals;                // flag for structure dumping
 .vector         velocity;
 .vector         angles;
 .vector         avelocity;
+
+#ifdef NETQUAKE
+.vector punchangle;
+#endif
 
 .string         classname;              // spawn function
 .string         model;
@@ -158,8 +157,6 @@ void            end_sys_globals;                // flag for structure dumping
 
 .float          nextthink;
 .entity         groundentity;
-
-
 
 // stats
 .float          health;
@@ -187,6 +184,10 @@ void            end_sys_globals;                // flag for structure dumping
 
 .float          fixangle;
 .vector         v_angle;                // view / targeting angle for players
+
+#ifdef NETQUAKE
+.float idealpitch;
+#endif
 
 .string         netname;
 
@@ -251,62 +252,49 @@ void            end_sys_fields;                 // flag for structure dumping
 // constants
 //
 
-float   FALSE                                   = 0;
-float   TRUE                                    = 1;
-
 // edict.flags
-float   FL_FLY                                  = 1;
-float   FL_SWIM                                 = 2;
-float   FL_CLIENT                               = 8;    // set for all client edicts
-float   FL_INWATER                              = 16;   // for enter / leave water splash
-float   FL_MONSTER                              = 32;
-float   FL_GODMODE                              = 64;   // player cheat
-float   FL_NOTARGET                             = 128;  // player cheat
-float   FL_ITEM                                 = 256;  // extra wide size for bonus items
-float   FL_ONGROUND                             = 512;  // standing on something
-float   FL_PARTIALGROUND                = 1024; // not all corners are valid
-float   FL_WATERJUMP                    = 2048; // player jumping out of water
-float   FL_JUMPRELEASED                 = 4096; // for jump debouncing
+#define FL_FLY              1
+#define FL_SWIM             2
+#define FL_CLIENT           8 // set for all client edicts
+#define FL_INWATER         16 // for enter / leave water splash
+#define FL_MONSTER         32
+#define FL_GODMODE         64 // player cheat
+#define FL_NOTARGET       128 // player cheat
+#define FL_ITEM           256 // extra wide size for bonus items
+#define FL_ONGROUND       512 // standing on something
+#define FL_PARTIALGROUND 1024 // not all corners are valid
+#define FL_WATERJUMP     2048 // player jumping out of water
+#define FL_JUMPRELEASED  4096 // for jump debouncing
 
 // edict.movetype values
-float   MOVETYPE_NONE                   = 0;    // never moves
-//float MOVETYPE_ANGLENOCLIP    = 1;
-//float MOVETYPE_ANGLECLIP              = 2;
-float   MOVETYPE_WALK                   = 3;    // players only
-float   MOVETYPE_STEP                   = 4;    // discrete, not real time unless fall
-float   MOVETYPE_FLY                    = 5;
-float   MOVETYPE_TOSS                   = 6;    // gravity
-float   MOVETYPE_PUSH                   = 7;    // no clip to world, push and crush
-float   MOVETYPE_NOCLIP                 = 8;
-float   MOVETYPE_FLYMISSILE             = 9;    // fly with extra size against monsters
-float   MOVETYPE_BOUNCE                 = 10;
-float   MOVETYPE_BOUNCEMISSILE  = 11;   // bounce with extra size
+#define MOVETYPE_NONE           0 // never moves
+#define MOVETYPE_WALK           3 // players only
+#define MOVETYPE_STEP           4 // discrete, not real time unless fall
+#define MOVETYPE_FLY            5
+#define MOVETYPE_TOSS           6
+#define MOVETYPE_PUSH           7 // no clip to world, push and crush
+#define MOVETYPE_NOCLIP         8
+#define MOVETYPE_FLYMISSILE     9 // fly with extra size against monsters
+#define MOVETYPE_BOUNCE        10 
 
 // edict.solid values
-float   SOLID_NOT                               = 0;    // no interaction with other objects
-float   SOLID_TRIGGER                   = 1;    // touch on edge, but not blocking
-float   SOLID_BBOX                              = 2;    // touch on edge, block
-float   SOLID_SLIDEBOX                  = 3;    // touch on edge, but not an onground
-float   SOLID_BSP                               = 4;    // bsp clip, touch on edge, block
+#define SOLID_NOT      0 // no interaction with other objects
+#define SOLID_TRIGGER  1 // touch on edge, but not blocking
+#define SOLID_BBOX     2 // touch on edge, block
+#define SOLID_SLIDEBOX 3 // touch on edge, but not an onground
+#define SOLID_BSP      4 // bsp clip, touch on edge, block
 
-// range values
-float   RANGE_MELEE                             = 0;
-float   RANGE_NEAR                              = 1;
-float   RANGE_MID                               = 2;
-float   RANGE_FAR                               = 3;
 
 // deadflag values
-
-float   DEAD_NO                                 = 0;
-float   DEAD_DYING                              = 1;
-float   DEAD_DEAD                               = 2;
-float   DEAD_RESPAWNABLE                = 3;
+#define DEAD_NO          0
+#define DEAD_DYING       1
+#define DEAD_DEAD        2
+#define DEAD_RESPAWNABLE 3
 
 // takedamage values
-
-float   DAMAGE_NO                               = 0;
-float   DAMAGE_YES                              = 1;
-float   DAMAGE_AIM                              = 2;
+#define DAMAGE_NO  0
+#define DAMAGE_YES 1
+#define DAMAGE_AIM 2
 
 // items
 float   IT_AXE                                  = 4096;
@@ -318,6 +306,8 @@ float   IT_GRENADE_LAUNCHER             = 16;
 float   IT_ROCKET_LAUNCHER              = 32;
 float   IT_LIGHTNING                    = 64;
 float   IT_EXTRA_WEAPON                 = 128;
+float 	IT_EXTRA_WEAPON2				= 8388608;			// solitude
+float 	IT_SKULL				        = 16777216;			// solitude
 
 float   IT_SHELLS                               = 256;
 float   IT_NAILS                                = 512;
@@ -346,11 +336,6 @@ float   CONTENT_SLIME                   = -4;
 float   CONTENT_LAVA                    = -5;
 float   CONTENT_SKY                             = -6;
 
-float   STATE_TOP               = 0;
-float   STATE_BOTTOM    = 1;
-float   STATE_UP                = 2;
-float   STATE_DOWN              = 3;
-
 vector  VEC_ORIGIN = '0 0 0';
 vector  VEC_HULL_MIN = '-16 -16 -24';
 vector  VEC_HULL_MAX = '16 16 32';
@@ -370,7 +355,6 @@ float   SVC_SMALLKICK           = 34;
 float   SVC_BIGKICK                     = 35;
 float   SVC_MUZZLEFLASH         = 39;
 
-
 float   TE_SPIKE                = 0;
 float   TE_SUPERSPIKE   = 1;
 float   TE_GUNSHOT              = 2;
@@ -389,56 +373,50 @@ float   TE_LIGHTNINGBLOOD = 13;
 // sound channels
 // channel 0 never willingly overrides
 // other channels (1-7) allways override a playing sound on that channel
-float   CHAN_AUTO               = 0;
-float   CHAN_WEAPON             = 1;
-float   CHAN_VOICE              = 2;
-float   CHAN_ITEM               = 3;
-float   CHAN_BODY               = 4;
-float   CHAN_NO_PHS_ADD = 8;    // ie: CHAN_BODY+CHAN_NO_PHS_ADD
+#define CHAN_AUTO   0
+#define CHAN_WEAPON 1
+#define CHAN_VOICE  2
+#define CHAN_ITEM   3
+#define CHAN_BODY   4
+// chan_no_phs_add is defined in engine.qc
 
-float   ATTN_NONE               = 0;
-float   ATTN_NORM               = 1;
-float   ATTN_IDLE               = 2;
-float   ATTN_STATIC             = 3;
-
-// update types
-
-float   UPDATE_GENERAL  = 0;
-float   UPDATE_STATIC   = 1;
-float   UPDATE_BINARY   = 2;
-float   UPDATE_TEMP             = 3;
+#define ATTN_NONE   0.0 // no volume fall off due to range
+#define ATTN_NORM   1.0 // small volume fall off (1000 range)
+#define ATTN_IDLE   2.0 // medium volume fall off (500 range)
+#define ATTN_STATIC 3.0 // large volume fall off (333 range)
 
 // entity effects
 
 //float EF_BRIGHTFIELD  = 1;
-//float EF_MUZZLEFLASH  = 2;
+float   EF_MUZZLEFLASH  = 2;
 float   EF_BRIGHTLIGHT  = 4;
 float   EF_DIMLIGHT     = 8;
 float   EF_FLAG1                = 16;
 float   EF_FLAG2                = 32;
 // GLQuakeWorld Stuff
-float 	EF_BLUE		=	64;	// Blue Globe effect for Quad
-float	EF_RED		=	128;	// Red Globe effect for Pentagram
+// float 	EF_BLUE		=	64;	// Blue Globe effect for Quad
+// float	EF_RED		=	128;	// Red Globe effect for Pentagram
+
 // messages
-float   MSG_BROADCAST   = 0;            // unreliable to all
-float   MSG_ONE                 = 1;            // reliable to one (msg_entity)
-float   MSG_ALL                 = 2;            // reliable to all
-float   MSG_INIT                = 3;            // write to the init string
-float   MSG_MULTICAST   = 4;            // for multicast() call
+#define MSG_BROADCAST 0 // unreliable to all
+#define MSG_ONE       1 // reliable to one (msg_entity)
+#define MSG_ALL       2 // reliable to all
+#define MSG_INIT      3 // write to the init string
+#define MSG_MULTICAST 4 // for multicast() call
 
 // message levels
-float   PRINT_LOW               = 0;            // pickup messages
-float   PRINT_MEDIUM    	= 1;            // death messages
-float   PRINT_HIGH              = 2;            // critical messages
-float   PRINT_CHAT              = 3;            // also goes to chat console
+#define PRINT_LOW    0
+#define PRINT_MEDIUM 1
+#define PRINT_HIGH   2
+#define PRINT_CHAT   3
 
 // multicast sets
-float   MULTICAST_ALL   = 0;            // every client
-float   MULTICAST_PHS   = 1;            // within hearing
-float   MULTICAST_PVS   = 2;            // within sight
-float   MULTICAST_ALL_R = 3;            // every client, reliable
-float   MULTICAST_PHS_R = 4;            // within hearing, reliable
-float   MULTICAST_PVS_R = 5;            // within sight, reliable
+#define MULTICAST_ALL   0 // every client
+#define MULTICAST_PHS   1 // within hearing
+#define MULTICAST_PVS   2 // within sight
+#define MULTICAST_ALL_R 3 // every client, reliable
+#define MULTICAST_PHS_R 4 // within hearing, reliable
+#define MULTICAST_PVS_R 5 // within sight, reliable
 
 
 
@@ -448,175 +426,290 @@ float   MULTICAST_PVS_R = 5;            // within sight, reliable
 //
 // globals
 //
-float   movedist;
+// float   movedist;
 
 string  string_null;    // null string, nothing should be held here
-float   empty_float;
 
 entity  activator;              // the entity that activated a trigger or brush
 
 entity  damage_attacker;        // set by T_Damage
-entity  damage_inflictor;
+entity  damage_inflictor;       // set by T_Damage
+INTEGER damage_mod;             // set by T_Damage
+
 float   framecount;
 
 //
 // cvars checked each frame
 //
-float           teamplay;
 float           timelimit;
 float           fraglimit;
-float           deathmatch;
-float           rj                      =       1;
+float           rj;
+
+#ifndef NETQUAKE
+// these variables are not a part of QW's system fields
+float deathmatch;
+float swat;
+float coop;
+float teamplay;
+#endif
+
+float skill;
+
+// coop spawning globals
+entity  lastspawn;
+float spotspawn;
+
+entity shub; // boss entity
 
 //================================================
 
-//
-// world fields (FIXME: make globals)
-//
-.string         wad;
-.string         map;
-.float          worldtype;      // 0=medieval 1=metal 2=base
+#define WT_MEDIEVAL 0
+#define WT_METAL    1
+#define WT_BASE     2
 
 //================================================
 
-.string         killtarget;
+.string killtarget; // used by anything using SUB_UseTargets (items/triggers/etc)
 
-//
-// quakeed fields
-//
-.float          light_lev;              // not used by game, but parsed by light util
-.float          style;
+.void(entity attacker, float damage) th_pain; // used by secret doors, monsters, players
+.void()         th_die;   // used by anything damagable (doors/buttons/players/monsters/explobox/triggermultiple)
 
+.float speed; // used with door/plats/fireball spawner, inherited
+.string map; // used with world/trigger_changelevel, inherited
 
-//
-// monster ai
-//
-.void()         th_stand;
-.void()         th_walk;
-.void()         th_run;
-.void()         th_missile;
-.void()         th_melee;
-.void(entity attacker, float damage)            th_pain;
-.void()         th_die;
-
-.entity         oldenemy;               // mad at this player before taking damage
-
-.float          speed;
-
-.float  lefty;
-
-.float  search_time;
-.float  attack_state;
-
-float   AS_STRAIGHT             = 1;
-float   AS_SLIDING              = 2;
-float   AS_MELEE                = 3;
-float   AS_MISSILE              = 4;
-
-//
-// player only fields
-//
-.float          voided;
-.float          walkframe;
+// used with monsters/players
+.INTEGER ammo_shells_real;	// real shells count
+.INTEGER ammo_nails_real;	// real nails count
+.INTEGER ammo_rockets_real;	// real rockets count
+.INTEGER ammo_cells_real;	// real cells count
 
 // Zoid Additions
-.float		maxspeed;		// Used to set Maxspeed on a player
-.float		gravity;		// Gravity Multiplier (0 to 1.0)
+noref .float		maxspeed;		// Used to set Maxspeed on a player
+noref .float		gravity;		// Gravity Multiplier (0 to 1.0)
 
+.float          attack_finished; // used with lots of stuff...
+.float          pain_finished; // used with monsters/players
 
+.float          invincible_finished; // only used for players but object check needed for T_Damage
+.float          super_damage_finished; // only used for players but object check needed for T_Damage
 
-.float          attack_finished;
-.float          pain_finished;
-
-.float          invincible_finished;
-.float          invisible_finished;
-.float          super_damage_finished;
-.float          radsuit_finished;
-
-.float          invincible_time, invincible_sound;
-.float          invisible_time, invisible_sound;
-.float          super_time, super_sound;
-.float          rad_time;
-.float          fly_sound;
-
-.float          axhitme;
-
-.float          show_hostile;   // set to time+0.2 whenever a client fires a
-							// weapon or takes damage.  Used to alert
-							// monsters that otherwise would let the player go
-.float          jump_flag;              // player jump flag
-.float          swim_flag;              // player swimming sound flag
-.float          air_finished;   // when time > air_finished, start drowning
-.float          bubble_count;   // keeps track of the number of bubbles
-.string         deathtype;              // keeps track of how the player died
-
-//
-// object stuff
-//
-.string         mdl;
-.vector         mangle;                 // angle at start
-
-.vector         oldorigin;              // only used by secret door
-
-.float          t_length, t_width;
-
-
-//
-// doors, etc
-//
-.vector         dest, dest1, dest2;
-.float          wait;                   // time from firing to restarting
-.float          delay;                  // time from activation to firing
-.entity         trigger_field;  // door's trigger entity
-.string         noise4;
-
-//
-// monsters
-//
-.float          pausetime;
-.entity         movetarget;
-
-
-//
-// doors
-//
-.float          aflag;
-.float          dmg;                    // damage done by door when hit
-	
 //
 // misc
 //
-.float          cnt;                    // misc flag
+.float cnt; // misc flag used by trains/dropped pent and quad/monsters
 	
-//
-// subs
-//
-.void()         think1;
-.vector         finaldest, finalangle;
+// intermission
+float   intermission_running;
+float   intermission_exittime;
 
-//
-// triggers
-//
-.float          count;                  // for counting triggers
+#ifdef NETQUAKE
+entity newmis;
+#endif
+
+// extensions
+.float alpha; // DP_ENT_ALPHA
+
+// enums
+// ai ranges
+enum
+{
+	RANGE_MELEE,
+	RANGE_NEAR,
+	RANGE_MID,
+	RANGE_FAR
+};
+
+// monster attack states
+enum
+{
+	AS_NONE,
+	AS_STRAIGHT,
+	AS_SLIDING,
+	AS_MELEE,
+	AS_MISSILE
+};
+
+// door/plat states
+enum {
+	STATE_TOP,
+	STATE_BOTTOM,
+	STATE_UP,
+	STATE_DOWN
+};
+
+// heal defines
+enumflags {
+	H_ROTTEN,
+	H_MEGA
+};
+
+// weaponstate defines
+enum {
+	WS_IDLE,
+	WS_FIRING1,
+	WS_FIRING2 // used with nailgun
+};
+
+// ammo type defines
+enum {
+	AT_NONE,
+	AT_SHELLS,
+	AT_NAILS,
+	AT_ROCKETS,
+	AT_CELLS
+};
+
+// unions
+//floats (includes vectors)
+.union {
+	struct { // fields used with world object
+		float worldtype; 	// world type, 0=medieval 1=metal 2=base
+	};
+	struct { // fields used with triggers/doors/plats
+		float delay;		// time from activation to firing
+		float wait;			// time from firing to restarting
+		float t_length;		// override length to move sideways
+		float t_width; 		// override length to move upwards/downwards
+		vector finaldest;		// used with SUB_CalcMove
+		vector finalangle;	// used with SUB_CalcMove
+		float count;		// for counting triggers
+		float dmg;			// damage done by door/train/trigger hurt
+		vector mangle;		// initial angle (doors/teleporter/intermission)
+		float lip;			// position adjustment (func_door/func_button)
+		float state;		// object state (doors/buttons/plats)
+		vector pos1;		// top position (doors/buttons/plats)
+		vector pos2;		// bottom position (doors/buttons/plats)
+		float height;		// height (plats/trigger_monsterjump)
+		vector dest1;		// passed to CalcMove (doors)
+		vector dest2;		// passed to CalcMove (doors)
+	};
+	struct { // fields used with players
+		float weaponframe_time;		// weapon frame advance time
+		float suicide_time;     	// time to allow suicide after spawn
+		float healdecay; 			// time when health will decay
+		float show_hostile;		// used to alert monsters
+		float lightning_sound;		// used for lightning sound playback
+		float fly_sound;			// used with trigger_push and maintaining wind sound
+		float invincible_time;		// pentagram state
+		float invincible_sound;		// pentagram sound playback
+		float invisible_time;		// ring state
+		float invisible_sound;		// ring sound playback
+		float invisible_finished;	// ring current duration
+		float super_time;			// quad state
+		float super_sound;		// quad sound playback
+		float rad_time;			// rad suit state
+		float radsuit_finished;		// rad suit current duration
+		float dmgtime;			// time slime/lava will damage
+		float swim_flag;			// swim sound playback
+		float air_finished;		// when time > air_finished, start drowning
+		float waterdmg;			// damage water will deal when drowning
+		float jump_flag;			// last z velocity used for falling damage
+	};
+	struct { // fields used with items
+		float healamount;	// amount healed with health item
+		//float ammo_count;	// ammo amount 
+	};
+	struct { // fields used with generic projectiles
+		float damage_direct;		// damage done with a direct hit
+		float damage_exp; 		// damage done from radius damage
+		float radius_exp;  		// radius of radius damage
+		float expire_time;		// time when projectile dies
+		float proj_think_time;		// interval between thinks
+	};
+	struct { // fields used with lights
+		float light_lev;	// not used by game, but parsed by light util
+		float style;	// lightstyle to use for light
+	};
+	struct { // fields used with monsters
+		float search_time;	// search time intervals
+		float attack_state;	// current AI attack state
+		float pausetime;		// time to pause for monsters
+		float hknightattack;	// hell knight attack pattern
+		float lefty;		// ai slide move
+		float wizardidle;		// wizard idle sound timer
+		float inpain;		// zombie in pain
+	};
+	// fields used with ambient sounds?
+	/*
+	struct {
+		float waitmin;
+		float waitmax;
+		float distance;
+		float volume;
+	};
+	*/
+};
+
+//integers
+.union {
+
+	struct { // fields used with players
+		INTEGER weaponstate;		// firing state of current weapon
+		INTEGER walkframe;		// used with walking animation
+		INTEGER ammo_type;		// ammo type in use
+	};
+	struct { // fields used with bubbles spawned from drowning
+		INTEGER bubble_count;   // keeps track of the number of bubbles
+		INTEGER bubble_state;	// associated with bubble progression
+	};
+	struct { // fields used with items
+		INTEGER healtype;	// type of health with health item
+	};
+	struct { // fields used with generic projectiles
+		INTEGER mod_direct;		// mod type for direct hit
+		INTEGER mod_exp; 			// mod type for radius damage
+		INTEGER proj_effect;		// effect used with projectile
+		INTEGER voided;			// projectile has been voided
+	};
+};
+
+//functions
+.union {
+	struct { // fields used with triggers/doors/plats
+		void() think1;		// used with SUB_CalcMove
+	};
+	struct { // fields used with generic projectiles
+		void() proj_think;		// extra think function used with projectile
+		float() proj_touch;		// extra touch function used with projectile
+	};
+	struct { // fields used with monsters
+		void() th_stand;		// standing animation
+		void() th_walk;		// walking animation
+		void() th_run;		// running animation
+		void() th_missile;	// ranged animation
+		void() th_melee;		// melee animation
+	};
+};
 
 
-//
-// plats / doors / buttons
-//
-.float          lip;
-.float          state;
-.vector         pos1, pos2;             // top and bottom positions
-.float          height;
+//entities
+.union {
+	struct { // fields used with triggers/doors/plats
+		entity trigger_field;	// used with linking (doors)
+	};
 
-//
-// sounds
-//
-.float          waitmin, waitmax;
-.float          distance;
-.float          volume;
+	struct { // fields used with monsters
+		entity oldenemy;		// old enemy
+		entity movetarget;	// target entity to move to
+	};
+};
 
+//strings
+.union {
+	struct { // fields used with world object
+		string wad; //mute it
+	};
+	struct { // fields used with triggers/doors/plats
+		string noise4;		// extra sound (doors)
+	};
+	struct { // fields used with items
+		string mdl;		// model used with SUB_regen
+	};
+};
 
-
+//mute those warnings (unions/structs do not support noref mid-struct, but a later def will propogate the noref flag)
+noref .string wad;
+noref .float light_lev;
 
 //===========================================================================
 	
@@ -630,9 +723,9 @@ void(entity e, vector o) setorigin      = #2;
 void(entity e, string m) setmodel       = #3;           // set movetype and solid first
 void(entity e, vector min, vector max) setsize = #4;
 // #5 was removed
-void() break                                            = #6;
+// void() break                                            = #6;
 float() random                                          = #7;           // returns 0 - 1
-void(entity e, float chan, string samp, float vol, float atten) sound = #8;
+//void(entity e, float chan, string samp, float vol, float atten) sound = #8;		//FBX
 vector(vector v) normalize                      = #9;
 void(string e) error                            = #10;
 void(string e) objerror                         = #11;
@@ -652,10 +745,10 @@ entity() checkclient                            = #17;  // returns a client to l
 entity(entity start, .string fld, string match) find = #18;
 string(string s) precache_sound         = #19;
 string(string s) precache_model         = #20;
-void(entity client, string s)stuffcmd = #21;
+//void(entity client, string s)stuffcmd = #21;		// FBX
 entity(vector org, float rad) findradius = #22;
-void(float level, string s) bprint                              = #23;
-void(entity client, float level, string s) sprint = #24;
+// bprint moved to engine.qc
+// sprint moved to engine.qc
 void(string s) dprint                           = #25;
 string(float f) ftos                            = #26;
 string(vector v) vtos                           = #27;
@@ -665,7 +758,7 @@ void() traceoff                                         = #30;
 void(entity e) eprint                           = #31;          // prints an entire edict
 float(float yaw, float dist) walkmove   = #32;  // returns TRUE or FALSE
 // #33 was removed
-float(float yaw, float dist) droptofloor= #34;  // TRUE if landed on floor
+float() droptofloor= #34;  // TRUE if landed on floor
 void(float style, string value) lightstyle = #35;
 float(float v) rint                                     = #36;          // round to nearest int
 float(float v) floor                            = #37;          // largest integer <= v
@@ -675,8 +768,8 @@ float(entity e) checkbottom                     = #40;          // true if self 
 float(vector v) pointcontents           = #41;          // returns a CONTENT_*
 // #42 was removed
 float(float f) fabs = #43;
-vector(entity e, float speed) aim = #44;                // returns the shooting vector
-float(string s) cvar = #45;                                             // return cvar.value
+//vector(entity e, float speed) aim = #44;                // returns the shooting vector	// FBX
+// cvar moved to engine.qc
 void(string s) localcmd = #46;                                  // put string into local que
 entity(entity e) nextent = #47;                                 // for looping through all ents
 // #48 was removed
@@ -688,6 +781,7 @@ vector(vector v) vectoangles                    = #51;
 //
 // direct client message generation
 //
+/*
 void(float to, float f) WriteByte               = #52;
 void(float to, float f) WriteChar               = #53;
 void(float to, float f) WriteShort              = #54;
@@ -696,20 +790,21 @@ void(float to, float f) WriteCoord              = #56;
 void(float to, float f) WriteAngle              = #57;
 void(float to, string s) WriteString    = #58;
 void(float to, entity s) WriteEntity    = #59;
-
+// FBX'd
+*/
 // several removed
 
 void(float step) movetogoal                             = #67;
 
 string(string s) precache_file          = #68;  // no effect except for -copy
-void(entity e) makestatic               = #69;
+void(entity e) makestatic               = #69; 
 void(string s) changelevel = #70;
 
 //#71 was removed
 
 void(string var, string val) cvar_set = #72;    // sets cvar.value
 
-void(entity client, string s) centerprint = #73;        // sprint, but in middle
+//void(entity client, string s) centerprint = #73;        // sprint, but in middle		// FBX
 
 void(vector pos, string samp, float vol, float atten) ambientsound = #74;
 
@@ -717,15 +812,12 @@ string(string s) precache_model2        = #75;          // registered version on
 string(string s) precache_sound2        = #76;          // registered version only
 string(string s) precache_file2         = #77;          // registered version only
 
-void(entity e) setspawnparms            = #78;          // set parm1... to the
+//void(entity e) setspawnparms            = #78;          // set parm1... to the		// FBX
 												// values at level start
 												// for coop respawn
-void(entity killer, entity killee) logfrag = #79;       // add to stats
-
-string(entity e, string key) infokey    = #80;  // get a key value (world = serverinfo)
-float(string s) stof                            = #81;          // convert string to float
-void(vector where, float set) multicast = #82;  // sends the temp message to a set
-												// of clients, possibly in PVS or PHS
+// logfrag moved to engine.qc
+// infokey moved to engine.qc
+// stof moved to engine.qc
 
 //============================================================================
 
@@ -744,11 +836,17 @@ void() SUB_Remove;
 //
 //      combat.qc
 //
-void(entity targ, entity inflictor, entity attacker, float damage) T_Damage;
-
+void(entity targ, entity inflictor, entity attacker, float damage, INTEGER mod) T_Damage;
 
 float (entity e, float healamount, float ignore) T_Heal; // health function
 
-float(entity targ, entity inflictor) CanDamage;
-
-
+BOOL(entity targ, entity inflictor) CanDamage;
+.float crouch;
+float score_lastTic;
+.float alpha;
+.float nade_lives;	// The number of Grenades a player has.
+.float plasma_lives;
+.float kill_time;
+.float kill_amount;		//For reseting kill medals
+.float groundwep;		//For weapon pickup Icons
+.float reset;

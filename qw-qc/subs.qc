@@ -35,7 +35,7 @@ void() SUB_Remove = {remove(self);};
 QuakeEd only writes a single float for angles (bad idea), so up and down are
 just constant angles.
 */
-vector() SetMovedir =
+void() SetMovedir =
 {
 	if (self.angles == '0 -1 0')
 		self.movedir = '0 0 1';
@@ -307,4 +307,34 @@ void() SUB_UseTargets =
 	
 
 };
+
+#ifdef MONSTERS
+/*
+
+in nightmare mode, all attack_finished times become 0
+some monsters refire twice automatically
+
+*/
+
+void(float normal) SUB_AttackFinished =
+{
+	self.cnt = 0;		// refire count for nightmare
+	if (skill != 3)
+		self.attack_finished = time + normal;
+};
+
+BOOL (entity targ) visible;
+
+void (void() thinkst) SUB_CheckRefire =
+{
+	if (skill != 3)
+		return;
+	if (self.cnt == 1)
+		return;
+	if (!visible (self.enemy))
+		return;
+	self.cnt = 1;
+	self.think = thinkst;
+};
+#endif
 

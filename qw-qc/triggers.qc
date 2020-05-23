@@ -1,33 +1,3 @@
-/*
-	triggers.qc
-
-	trigger functions
-
-	Copyright (C) 1996-1997  Id Software, Inc.
-
-	This program is free software; you can redistribute it and/or
-	modify it under the terms of the GNU General Public License
-	as published by the Free Software Foundation; either version 2
-	of the License, or (at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-	See the GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with this program; if not, write to:
-
-		Free Software Foundation, Inc.
-		59 Temple Place - Suite 330
-		Boston, MA  02111-1307, USA
-
-*/
-
-entity stemp, otemp, s, old;
-
-
 void() trigger_reactivate =
 {
 	self.solid = SOLID_TRIGGER;
@@ -136,20 +106,20 @@ set "message" to text string
 */
 void() trigger_multiple =
 {
-	if (self.sounds == 1)
+	switch (self.sounds)
 	{
+	case 1:
 		precache_sound ("misc/secret.wav");
 		self.noise = "misc/secret.wav";
-	}
-	else if (self.sounds == 2)
-	{
+		break;
+	case 2:
 		precache_sound ("misc/talk.wav");
 		self.noise = "misc/talk.wav";
-	}
-	else if (self.sounds == 3)
-	{
+		break;
+	case 3:
 		precache_sound ("misc/trigger1.wav");
 		self.noise = "misc/trigger1.wav";
+		break;
 	}
 	
 	if (!self.wait)
@@ -247,8 +217,6 @@ void() trigger_secret =
 
 void() counter_use =
 {
-	local string junk;
-
 	self.count = self.count - 1;
 	if (self.count < 0)
 		return;
@@ -310,14 +278,14 @@ void() play_teleport =
 	local	float v;
 	local	string tmpstr;
 
-	v = random() * 5;
-	if (v < 1)
+	v = random();
+	if (v < 0.2)
 		tmpstr = "misc/r_tele1.wav";
-	else if (v < 2)
+	else if (v < 0.4)
 		tmpstr = "misc/r_tele2.wav";
-	else if (v < 3)
+	else if (v < 0.6)
 		tmpstr = "misc/r_tele3.wav";
-	else if (v < 4)
+	else if (v < 0.8)
 		tmpstr = "misc/r_tele4.wav";
 	else
 		tmpstr = "misc/r_tele5.wav";
@@ -328,24 +296,18 @@ void() play_teleport =
 
 void(vector org) spawn_tfog =
 {
+	local entity s;
 	s = spawn ();
 	s.origin = org;
 	s.nextthink = time + 0.2;
 	s.think = play_teleport;
 
-	WriteByte (MSG_MULTICAST, SVC_TEMPENTITY);
-	WriteByte (MSG_MULTICAST, TE_TELEPORT);
-	WriteCoord (MSG_MULTICAST, org_x);
-	WriteCoord (MSG_MULTICAST, org_y);
-	WriteCoord (MSG_MULTICAST, org_z);
-	multicast (org, MULTICAST_PHS);
+	TE_teleport(org);
 };
 
 
 void() tdeath_touch =
 {
-	local entity other2;
-
 	if (other == self.owner)
 		return;
 
@@ -354,19 +316,16 @@ void() tdeath_touch =
 	{
 		if (other.invincible_finished > time &&
 			self.owner.invincible_finished > time) {
-			self.classname = "teledeath3";
 			other.invincible_finished = 0;
 			self.owner.invincible_finished = 0;
-			T_Damage (other, self, self, 50000);
-			other2 = self.owner;
-			self.owner = other;
-			T_Damage (other2, self, self, 50000);
+			T_Damage (other, self, self.owner, 50000, MOD_TELEFRAGDEFLECT);
+			T_Damage (self.owner, self, other, 50000, MOD_TELEFRAGDEFLECT);
+			return;
 		}
 			
 		if (other.invincible_finished > time)
 		{
-			self.classname = "teledeath2";
-			T_Damage (self.owner, self, self, 50000);
+			T_Damage (self.owner, self, self.owner, 50000, MOD_TELEFRAGDEFLECT);
 			return;
 		}
 		
@@ -374,7 +333,7 @@ void() tdeath_touch =
 
 	if (other.health)
 	{
-		T_Damage (other, self, self, 50000);
+		T_Damage (other, self, self.owner, 50000, MOD_TELEFRAG);
 	}
 };
 
@@ -576,7 +535,7 @@ void() hurt_touch =
 	if (other.takedamage)
 	{
 		self.solid = SOLID_NOT;
-		T_Damage (other, self, self, self.dmg);
+		T_Damage (other, self, self, self.dmg, MOD_HURT);
 		self.think = hurt_on;
 		self.nextthink = time + 1;
 	}
@@ -660,6 +619,12 @@ Walking monsters that touch this will jump in the direction of the trigger's ang
 */
 void() trigger_monsterjump =
 {
+	if (deathmatch)
+	{
+		remove(self);
+		return;
+	}
+
 	if (!self.speed)
 		self.speed = 200;
 	if (!self.height)

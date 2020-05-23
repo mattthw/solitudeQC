@@ -122,6 +122,9 @@ void() main =
 	precache_file ("gfx/p_save.lmp");
 	precache_file ("gfx/p_multi.lmp");
 
+	
+
+
 // sounds loaded by C code
 	precache_sound ("misc/menu1.wav");
 	precache_sound ("misc/menu2.wav");
@@ -133,55 +136,10 @@ void() main =
 // shareware
 	precache_file ("maps/start.bsp");
 
-	precache_file ("maps/e1m1.bsp");
-	precache_file ("maps/e1m2.bsp");
-	precache_file ("maps/e1m3.bsp");
-	precache_file ("maps/e1m4.bsp");
-	precache_file ("maps/e1m5.bsp");
-	precache_file ("maps/e1m6.bsp");
-	precache_file ("maps/e1m7.bsp");
-	precache_file ("maps/e1m8.bsp");
-
 // registered
 	precache_file2 ("gfx/pop.lmp");
 
-	precache_file2 ("maps/e2m1.bsp");
-	precache_file2 ("maps/e2m2.bsp");
-	precache_file2 ("maps/e2m3.bsp");
-	precache_file2 ("maps/e2m4.bsp");
-	precache_file2 ("maps/e2m5.bsp");
-	precache_file2 ("maps/e2m6.bsp");
-	precache_file2 ("maps/e2m7.bsp");
-
-	precache_file2 ("maps/e3m1.bsp");
-	precache_file2 ("maps/e3m2.bsp");
-	precache_file2 ("maps/e3m3.bsp");
-	precache_file2 ("maps/e3m4.bsp");
-	precache_file2 ("maps/e3m5.bsp");
-	precache_file2 ("maps/e3m6.bsp");
-	precache_file2 ("maps/e3m7.bsp");
-
-	precache_file2 ("maps/e4m1.bsp");
-	precache_file2 ("maps/e4m2.bsp");
-	precache_file2 ("maps/e4m3.bsp");
-	precache_file2 ("maps/e4m4.bsp");
-	precache_file2 ("maps/e4m5.bsp");
-	precache_file2 ("maps/e4m6.bsp");
-	precache_file2 ("maps/e4m7.bsp");
-	precache_file2 ("maps/e4m8.bsp");
-
-	precache_file2 ("maps/end.bsp");
-
-	precache_file2 ("maps/dm1.bsp");
-	precache_file2 ("maps/dm2.bsp");
-	precache_file2 ("maps/dm3.bsp");
-	precache_file2 ("maps/dm4.bsp");
-	precache_file2 ("maps/dm5.bsp");
-	precache_file2 ("maps/dm6.bsp");
 };
-
-
-entity  lastspawn;
 
 //=======================
 /*QUAKED worldspawn (0 0 0) ?
@@ -197,16 +155,33 @@ World Types:
 //=======================
 void() worldspawn =
 {
+	local float sol_grav, sol_ms;
+
 	lastspawn = world;
-	InitBodyQue ();
+	spotspawn = 0;
 
+	BotInit();  // FrikBot
+	ENG_Check();
+
+	sol_grav = cvar("sol_gravity");
+	sol_ms = cvar("sol_maxspeed");
+	
+	if (sol_grav)
+		cvar_set ("sv_gravity", ftos(sol_grav));
+	else
+		cvar_set ("sv_gravity", "#DEFAULT_GRAVITY");
+
+	if (sol_ms)
+		cvar_set ("sv_maxspeed", ftos(sol_ms));
+	else
+		cvar_set ("sv_maxspeed", "#DEFAULT_MAXSPEED");
+		
+	cvar_set ("sv_maxvelocity", "10000");				// for the sniper projectile
+#ifndef NETQUAKE
 // custom map attributes
-
 	if (self.model == "maps/e1m8.bsp")
 		cvar_set ("sv_gravity", "100");
-	else
-		cvar_set ("sv_gravity", "800");
-
+#endif
 
 // the area based ambient sounds MUST be the first precache_sounds
 
@@ -244,26 +219,12 @@ void() worldspawn =
 
 	precache_sound ("misc/power.wav");                      //lightning for boss
 
-// player gib sounds
-	precache_sound ("player/gib.wav");                      // player gib sound
-	precache_sound ("player/udeath.wav");           // player gib sound
-	precache_sound ("player/tornoff2.wav");         // gib sound
-
 // player pain sounds
 
 	precache_sound ("player/pain1.wav");
-	precache_sound ("player/pain2.wav");
-	precache_sound ("player/pain3.wav");
-	precache_sound ("player/pain4.wav");
-	precache_sound ("player/pain5.wav");
-	precache_sound ("player/pain6.wav");
 
 // player death sounds
 	precache_sound ("player/death1.wav");
-	precache_sound ("player/death2.wav");
-	precache_sound ("player/death3.wav");
-	precache_sound ("player/death4.wav");
-	precache_sound ("player/death5.wav");
 
 	precache_sound ("boss1/sight1.wav");
 
@@ -293,9 +254,7 @@ void() worldspawn =
 	precache_model ("progs/player.mdl");
 	precache_model ("progs/eyes.mdl");
 	precache_model ("progs/h_player.mdl");
-	precache_model ("progs/gib1.mdl");
-	precache_model ("progs/gib2.mdl");
-	precache_model ("progs/gib3.mdl");
+	precache_sound ("player/tornoff2.wav");
 
 	precache_model ("progs/s_bubble.spr");  // drowning bubbles
 	precache_model ("progs/s_explod.spr");  // sprite explosion
@@ -306,7 +265,6 @@ void() worldspawn =
 	precache_model ("progs/v_rock.mdl");
 	precache_model ("progs/v_shot2.mdl");
 	precache_model ("progs/v_nail2.mdl");
-	precache_model ("progs/v_rock2.mdl");
 
 	precache_model ("progs/bolt.mdl");              // for lightning gun
 	precache_model ("progs/bolt2.mdl");             // for lightning gun
@@ -373,60 +331,88 @@ void() worldspawn =
 
 void() StartFrame =
 {
+	BotFrame(); // FrikBot
 	timelimit = cvar("timelimit") * 60;
 	fraglimit = cvar("fraglimit");
-	teamplay = cvar("teamplay");
+#ifdef NETQUAKE
 	deathmatch = cvar("deathmatch");
+	coop = cvar("coop");
+	teamplay = cvar("teamplay");
+#endif
+	skill = cvar("skill");
 	
 	framecount = framecount + 1;
 };
+void() func_rotating =
 
-/*
-==============================================================================
-
-BODY QUE
-
-==============================================================================
-*/
-
-entity  bodyque_head;
-
-void() bodyque =
-{       // just here so spawn functions don't complain after the world
-	// creates bodyques
-};
-
-void() InitBodyQue =
 {
-	local entity    e;
+
+	self.solid = SOLID_BSP;
+
+	self.movetype = MOVETYPE_PUSH;
+
+	setorigin (self, self.origin);
+
+	setmodel (self, self.model);
+
+	self.classname = "func_rotating";
+
+	setsize (self, self.mins, self.maxs);
+
+
+
+	if (!self.speed)
+
+		self.speed = 100;
+
+
+
+	if (self.spawnflags & 2) // reverse direction
+
+		self.speed = 0 - self.speed;
+
+
+
+	if (self.spawnflags & 64) // not solid
+
+		self.solid = SOLID_NOT;
+
+
+
+	if (self.spawnflags & 4)
+
+       {
 	
-	bodyque_head = spawn();
-	bodyque_head.classname = "bodyque";
-	bodyque_head.owner = spawn();
-	bodyque_head.owner.classname = "bodyque";
-	bodyque_head.owner.owner = spawn();
-	bodyque_head.owner.owner.classname = "bodyque";
-	bodyque_head.owner.owner.owner = spawn();
-	bodyque_head.owner.owner.owner.classname = "bodyque";
-	bodyque_head.owner.owner.owner.owner = bodyque_head;
+		self.avelocity_z = self.speed;
+
+		self.avelocity_x = 0;
+
+		self.avelocity_y = 0;
+
+	}
+
+	else if (self.spawnflags & 8)
+
+	{
+
+		self.avelocity_z = 0;
+
+		self.avelocity_x = self.speed;
+
+		self.avelocity_y = 0;
+
+	}
+
+	else
+
+	{
+
+		self.avelocity_z = 0;
+
+		self.avelocity_x = 0;
+
+		self.avelocity_y = self.speed;
+
+	}
+
 };
-
-
-// make a body que entry for the given ent so the ent can be
-// respawned elsewhere
-void(entity ent) CopyToBodyQue =
-{
-	bodyque_head.angles = ent.angles;
-	bodyque_head.model = ent.model;
-	bodyque_head.modelindex = ent.modelindex;
-	bodyque_head.frame = ent.frame;
-	bodyque_head.colormap = ent.colormap;
-	bodyque_head.movetype = ent.movetype;
-	bodyque_head.velocity = ent.velocity;
-	bodyque_head.flags = 0;
-	setorigin (bodyque_head, ent.origin);
-	setsize (bodyque_head, ent.mins, ent.maxs);
-	bodyque_head = bodyque_head.owner;
-};
-
-
